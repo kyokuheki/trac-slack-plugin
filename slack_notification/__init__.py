@@ -14,12 +14,9 @@ def prepare_ticket_values(ticket, action=None):
 	values['id'] = "#" + str(ticket.id)
 	values['action'] = action
 	values['url'] = ticket.env.abs_href.ticket(ticket.id)
-	values['project'] = ticket.env.project_name.encode('utf-8').strip()
+	values['project'] = ticket.env.project_name
 	values['attrib'] = ''
 	values['changes'] = ''
-	values['reporter'] = ticket['reporter']
-	values['owner'] = ticket['owner']
-	values['cc'] = ticket['cc']
 	return values
 
 class SlackNotifcationPlugin(Component):
@@ -41,12 +38,10 @@ class SlackNotifcationPlugin(Component):
 		#template = '%(project)s/%(branch)s %(rev)s %(author)s: %(logmsg)s'
 		#template = '%(project)s %(rev)s %(author)s: %(logmsg)s'
 		#template = '_%(project)s_ :incoming_envelope: \n%(type)s <%(url)s|%(id)s>: %(summary)s [*%(action)s* by @%(author)s]'
-		template = """
+		template = u"""
 _%(project)s_ :incoming_envelope:
 %(type)s <%(url)s|%(id)s>: *%(summary)s* [*%(action)s* by @%(author)s]
 reporter: @%(reporter)s, owner: @%(owner)s"""
-
-		attachments = []
 
 		if values['cc']:
 			template += ', cc:'
@@ -58,6 +53,8 @@ reporter: @%(reporter)s, owner: @%(owner)s"""
 
 		if values['action'] == 'created':
 			template += ' :pushpin:'
+
+		attachments = []
 
 		if values['attrib']:
 			attachments.append({
@@ -103,9 +100,10 @@ reporter: @%(reporter)s, owner: @%(owner)s"""
 		data = {
 			"channel": self.channel,
 			"username": self.username,
-			"text": message.encode('utf-8').strip(),
+			"text": message.strip(),
 			"attachments": attachments
 		}
+
 		proxies = {'https': self.proxy}
 		try:
 			r = requests.post(self.webhook, data={"payload":json.dumps(data)}, proxies=proxies)
