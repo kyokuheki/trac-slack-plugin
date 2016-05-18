@@ -17,6 +17,9 @@ def prepare_ticket_values(ticket, action=None):
 	values['project'] = ticket.env.project_name.encode('utf-8').strip()
 	values['attrib'] = ''
 	values['changes'] = ''
+	values['reporter'] = ticket['reporter']
+	values['owner'] = ticket['owner']
+	values['cc'] = ticket['cc']
 	return values
 
 class SlackNotifcationPlugin(Component):
@@ -37,9 +40,18 @@ class SlackNotifcationPlugin(Component):
 		values['author'] = re.sub(r' <.*', '', values['author'])
 		#template = '%(project)s/%(branch)s %(rev)s %(author)s: %(logmsg)s'
 		#template = '%(project)s %(rev)s %(author)s: %(logmsg)s'
-		template = '_%(project)s_ :incoming_envelope: \n%(type)s <%(url)s|%(id)s>: %(summary)s [*%(action)s* by @%(author)s]'
+		#template = '_%(project)s_ :incoming_envelope: \n%(type)s <%(url)s|%(id)s>: %(summary)s [*%(action)s* by @%(author)s]'
+		template = """
+_%(project)s_ :incoming_envelope:
+%(type)s <%(url)s|%(id)s>: *%(summary)s* [*%(action)s* by @%(author)s]
+reporter: @%(reporter)s, owner: @%(owner)s"""
 
 		attachments = []
+
+		if values['cc']:
+			template += ', cc:'
+			for cc in re.compile(r'[ ,]+').split(values['cc']):
+				template += ' @%s' % (cc)
 
 		if values['action'] == 'closed':
 			template += ' :white_check_mark:'
