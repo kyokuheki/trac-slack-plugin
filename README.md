@@ -28,6 +28,7 @@ Configuration in trac.ini:
     channel = #Trac
     username = Trac-Bot
     fields = type,component,resolution
+    proxy = http://proxy.example.com:8080/
 
 
 
