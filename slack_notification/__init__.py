@@ -1,8 +1,10 @@
+# -*- coding: utf8 -*-
+
 import json
 import requests
 import re
 from trac.core import *
-from trac.config import Option, IntOption
+from trac.config import Option
 from trac.ticket.api import ITicketChangeListener
 #from trac.versioncontrol.api import IRepositoryChangeListener
 #from trac.wiki.api import IWikiChangeListener
@@ -27,6 +29,8 @@ class SlackNotifcationPlugin(Component):
 		doc="Username of the bot on Slack notify")
 	fields = Option('slack', 'fields', 'type,component,resolution',
 		doc="Fields to include in Slack notification")
+	proxy = Option('slack', 'proxy', '',
+			doc="used in HTTP requests")
 
 	def notify(self, type, values):
 		# values['type'] = type
@@ -46,29 +50,40 @@ class SlackNotifcationPlugin(Component):
 		if values['attrib']:
 			attachments.append({
 				'title': 'Attributes',
-				'text': values['attrib']
+				'text': values['attrib'],
+				'mrkdwn_in': [
+					'text'
+				]
 			})
 
 		if values.get('changes', False):
 			attachments.append({
 				'title': ':small_red_triangle: Changes',
-				'text': values['changes']
+				'text': values['changes'],
+				'mrkdwn_in': [
+					'text'
+				]
 			})
 
-		# For comment and description, strip the {{{, }}} markers. They add nothing
-		# of value in Slack, and replacing them with ` or ``` doesn't help as these
-		# end up being formatted as blockquotes anyway.
+		# For comment and description, switch the {{{, }}} markers for ```
+		# code block markers.
 
 		if values['description']:
 			attachments.append({
 				'title': 'Description',
-				'text': re.sub(r'({{{|}}})', '', values['description'])
+				'text': re.sub(r'({{{|}}})', '```', values['description']),
+				'mrkdwn_in': [
+					'text'
+				]
 			})
 
 		if values['comment']:
 			attachments.append({
 				'title': 'Comment:',
-				'text': re.sub(r'({{{|}}})', '', values['comment'])
+				'text': re.sub(r'({{{|}}})', '```', values['comment']),
+				'mrkdwn_in': [
+					'text'
+				]
 			})
 
 		message = template % values
@@ -79,8 +94,9 @@ class SlackNotifcationPlugin(Component):
 			"text": message.encode('utf-8').strip(),
 			"attachments": attachments
 		}
+		proxies = {'https': self.proxy}
 		try:
-			r = requests.post(self.webhook, data={"payload":json.dumps(data)})
+			r = requests.post(self.webhook, data={"payload":json.dumps(data)}, proxies=proxies)
 		except requests.exceptions.RequestException as e:
 			return False
 		return True
